@@ -8,9 +8,9 @@ A standalone GNOME Shell extension for IndyCar fans. It displays:
 Formula 1 is intentionally not included. OpenIndy uses its own UUID, cache, UI,
 and data providers, so it can coexist with OpenF1 Dashboard.
 
-Future work that depends on authoritative practice, qualifying, warmup, and race
-timestamps is tracked in [`TODO.md`](./TODO.md). It documents the current API
-schema gap and the acceptance criteria for adding session-level timing safely.
+Architecture, provider findings, validation requirements, and the roadmap for
+authoritative practice, qualifying, warmup, and race timestamps are maintained
+in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
 
 ## Data and accuracy
 
