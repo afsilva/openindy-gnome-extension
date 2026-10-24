@@ -1,56 +1,32 @@
-# OpenWheel / IndyCar Development Handoff
+# OpenIndy Development Handoff
 
-**Branch:** `feature/open-wheel-indycar`  
-**Prepared:** 2026-10-24  
-**Repository:** `afsilva/openf1-gnome-extension`
+**Branch:** `main`
+**Prepared:** 2026-10-24
+**Repository:** `afsilva/openindy-gnome-extension`
 
 ## Purpose
 
-This branch is the development starting point for expanding the existing F1-only GNOME Shell extension to support both Formula 1 and the NTT IndyCar Series.
+This repository is the standalone development home for an IndyCar-focused GNOME Shell extension. It was split from the former `feature/open-wheel-indycar` branch of `afsilva/openf1-gnome-extension` so Formula 1 and IndyCar users can install independent extensions.
 
-No runtime code has been changed yet. This handoff intentionally captures the decisions, research, constraints, and suggested implementation sequence before development begins on Linux.
+The imported OpenF1 implementation is reference/scaffolding only. No IndyCar runtime code has been implemented yet. Before the first release, remove all F1 providers and behavior, rename the extension directory and classes, and adopt a new UUID so OpenIndy can coexist with OpenF1 Dashboard.
 
-## Proposed product name
+## Product identity
 
-Recommended working name: **OpenWheel Dashboard**
+Recommended working identity:
 
-Why:
+- Repository: **openindy-gnome-extension**
+- Visible name: **OpenIndy Dashboard**
+- Proposed UUID/directory: `openindydashboard@ansilva`
+- Panel label: `INDY`
+- Cache file: a separate OpenIndy-specific path
 
-- It accurately covers both Formula 1 and IndyCar.
-- It leaves room for other open-wheel series later.
-- “Dashboard” preserves continuity with the existing **OpenF1 Dashboard** name.
-- “OpenWheel Extension” is less descriptive in GNOME’s extension list.
+The final UUID must be selected before publishing and then treated as stable. It must not remain `openf1dashboard@ansilva`, because that would conflict with OpenF1 Dashboard and prevent users from installing both extensions.
 
-Alternative names considered:
+Avoid official IndyCar logos, trademarks, or other protected artwork unless redistribution rights are clear. A textual interface is sufficient and aligns with GNOME extension review expectations.
 
-- **OpenWheel Racing Dashboard** — clearer, but longer.
-- **OpenWheel Schedule & Standings** — very descriptive, but restrictive if features grow.
-- **Formula & Indy Dashboard** — clear today, but not extensible.
+## Imported baseline
 
-Before implementation, confirm whether **OpenWheel Dashboard** should be the public name.
-
-### Important naming and UUID distinction
-
-The visible extension name and the GNOME extension UUID are separate decisions:
-
-- The visible `name` in `metadata.json` can become `OpenWheel Dashboard` with a normal update.
-- Changing the UUID from `openf1dashboard@ansilva` to something such as `openwheeldashboard@ansilva` makes GNOME treat it as a different extension. It also requires renaming the extension directory, updating packaging/install instructions, cache identity if applicable, and potentially creating a separate listing on extensions.gnome.org.
-
-**Recommended migration policy:** initially preserve the existing UUID and directory while changing only the visible name and description. Revisit the UUID only if this should be published as a separate extension rather than an upgrade to the existing listing.
-
-## Current implementation
-
-The extension currently supports:
-
-- Next F1 weekend/session through OpenF1
-- F1 driver and constructor standings through Jolpica
-- Cache-first loading and bounded JSON responses
-- Fixed and allowlisted API hosts/paths
-- GNOME Shell 50
-- Direct HTTPS requests through GJS/Soup
-- API attribution links in the popup
-
-Current source files:
+The repository currently contains the OpenF1 Dashboard implementation as a known-working GNOME Shell baseline:
 
 ```text
 openf1dashboard@ansilva/
@@ -60,7 +36,18 @@ openf1dashboard@ansilva/
 └── LICENSE
 ```
 
-The implementation is concentrated in `extension.js`, so refactoring should be deliberate and incremental.
+Useful behavior to retain while replacing all F1-specific functionality:
+
+- Cache-first loading and last-known-good UI
+- Bounded JSON responses and on-disk cache
+- Fixed, allowlisted HTTPS hosts and paths
+- Asynchronous cache reads
+- Soup request cancellation on disable
+- Generic user-facing errors
+- API attribution links
+- GNOME Shell 50/51 lifecycle and ES module structure
+
+The implementation is concentrated in `extension.js`, so replacement should be deliberate and incremental. Do not publish an OpenIndy package while it still contains F1 metadata, API calls, labels, UUID, or cache identity.
 
 ## IndyCar API research
 
@@ -97,11 +84,13 @@ Observed response properties:
 - `Cache-Control: public, max-age=3600`
 - RaceHooks states that its public IndyCar data API is in its free tier and permits use in value-added commercial applications, but not resale of the raw feed
 - No free-tier SLA was identified
-- Current IndyCar support is schedules/results/standings/drivers, not live timing
+- Current support is schedules/results/standings/drivers, not live timing
 
-#### Blocking question before schedule implementation
+Reconfirm current terms, attribution requirements, endpoint behavior, and rate limits before release.
 
-The tested season schedule response listed events and sessions but did **not** expose scheduled dates, UTC start times, venues, or time zones in its documented schema. Those fields are required to reproduce the extension’s useful “next session” behavior.
+### Blocking question before schedule implementation
+
+The tested season schedule response listed events and sessions but did **not** expose scheduled dates, UTC start times, venues, or time zones in its documented schema. Those fields are required for a reliable “next session” experience.
 
 Before relying on RaceHooks for the schedule:
 
@@ -109,9 +98,9 @@ Before relying on RaceHooks for the schedule:
 2. Test upcoming-season payloads again in case the schema changes.
 3. Do not infer event times from IDs or array order.
 
-RaceHooks is immediately suitable for driver standings. Schedule support is conditional on resolving this timestamp gap.
+RaceHooks appears immediately suitable for driver standings. Schedule support is conditional on resolving this timestamp gap.
 
-### Official IndyCar website endpoints: validation/fallback only
+### Official IndyCar website endpoints: validation only
 
 The official website currently exposes undocumented JSON routes:
 
@@ -126,10 +115,10 @@ The tested `YearPointSummary` payload included driver championship points and pe
 - These routes are undocumented and unsupported.
 - No API contract, API-specific reuse license, or SLA was found.
 - Fields and identifiers can change without notice.
-- The complete dated schedule appears to require parsing official-site HTML or discovering more private routes.
+- The complete dated schedule appears to require parsing official-site HTML or discovering private routes.
 - Technical accessibility is not permission to redistribute data.
 
-Do not make these the production source without reviewing the current IndyCar terms and obtaining permission where appropriate. They may be useful for manual validation of another provider’s values.
+Do not use these as the production source without reviewing current terms and obtaining permission where appropriate. They may be useful for manual validation of another provider’s values.
 
 ### Other candidates
 
@@ -139,37 +128,31 @@ Do not make these the production source without reviewing the current IndyCar te
 
 ## Proposed user experience
 
-Do not mix F1 and IndyCar rows without an obvious series indicator.
-
 Recommended first version:
 
-1. Keep one panel indicator and popup.
-2. Add a compact series selector or two clearly labeled sections:
-   - `F1`
-   - `INDYCAR`
-3. Show the selected series’ next event/session and standings.
-4. Preserve each series’ independent last-known-good cache.
-5. Credit every active data provider in the existing data-source row.
+1. One `INDY` panel indicator and popup.
+2. Next event/session only when authoritative dates and UTC times are available.
+3. IndyCar driver standings, initially Top 10.
+4. Independent last-known-good OpenIndy cache.
+5. Attribution for every active data provider.
+6. Clear empty, offline, rate-limit, and unavailable-schedule states.
 
 Questions to decide before UI coding:
 
-- Selector versus simultaneous F1 and IndyCar sections
-- Default series on first install
-- Whether selection persists across Shell restarts
-- IndyCar standings depth (Top 10 is consistent with F1)
-- Whether the first IndyCar release may show only the next **race/event** if reliable session times are unavailable
-- Whether team/manufacturer standings are in scope; RaceHooks’ verified public endpoint currently provides driver standings
+- Whether standings-only is acceptable for the first release
+- Whether the first schedule release may show only the next **race/event** when session times are unavailable
+- Whether manufacturer/team standings are in scope; RaceHooks’ verified public endpoint currently provides driver standings
+- Whether standings should show car number, team, wins, and/or poles
 
 ## Recommended internal design
 
-Avoid scattering series-specific conditions throughout the existing UI. Introduce a normalized provider boundary, even if it remains in one file initially.
+Normalize provider data immediately after validation. Rendering code should not depend on RaceHooks-native JSON.
 
-Suggested normalized models:
+Suggested models:
 
 ```js
 // Event/session
 {
-    series: 'f1' | 'indycar',
     eventName: String,
     sessionName: String,
     startUtc: String,       // ISO 8601; never fabricate this
@@ -181,72 +164,65 @@ Suggested normalized models:
 
 // Driver standing
 {
-    series: 'f1' | 'indycar',
     position: Number,
     driverName: String,
     teamName: String | null,
+    carNumber: String | null,
     points: Number,
+    wins: Number | null,
+    poles: Number | null,
 }
 ```
 
 Possible provider methods:
 
 ```text
-loadF1Schedule()
-loadF1Standings()
 loadIndyCarSchedule()
 loadIndyCarStandings()
 ```
 
-Normalize API responses immediately after parsing. Rendering code should consume the normalized models rather than provider-native JSON.
+Keep fetching, payload validation, normalization, cache state, and rendering as distinct conceptual boundaries, even if the first implementation remains in one file.
 
 ## Suggested implementation sequence
 
-1. **Confirm product identity**
-   - Confirm visible name `OpenWheel Dashboard`.
-   - Decide whether to preserve `openf1dashboard@ansilva` as recommended.
+1. **Establish standalone identity**
+   - Rename the source directory to the final UUID, proposed as `openindydashboard@ansilva`.
+   - Rename extension classes, constants, labels, metadata, CSS classes, cache filename, and log prefixes.
+   - Update repository URLs and documentation.
+   - Verify OpenF1 Dashboard and OpenIndy can be installed simultaneously.
 
-2. **Confirm minimum viable scope**
-   - Decide whether IndyCar standings can ship before schedule/session time support.
-   - Resolve the RaceHooks timestamp question.
+2. **Create a regression baseline**
+   - Record the imported extension’s GNOME Shell lifecycle behavior before replacing providers.
+   - Preserve enable/disable cleanup, asynchronous cache loading, bounded responses, and packaging structure.
 
-3. **Create regression baseline on Linux**
-   - Install and run the current branch before modifications.
-   - Record extension state, errors, popup behavior, and both existing API paths.
+3. **Remove F1 behavior**
+   - Remove OpenF1 and Jolpica hosts, endpoint allowlists, parsers, credits, labels, and F1-specific UI.
+   - Never ship copied F1 functionality under the OpenIndy identity.
 
-4. **Refactor without behavior changes**
-   - Extract/identify provider-specific parsing boundaries.
-   - Preserve existing F1 output and caching behavior.
-
-5. **Add IndyCar standings**
+4. **Add IndyCar standings**
    - Add the fixed RaceHooks host and exact endpoint allowlist.
    - Validate schema, types, response size, HTTP status, and empty/error states.
-   - Add a provider-specific cache key.
+   - Normalize and cache standings under OpenIndy-specific keys.
 
-6. **Add series UI and persistence**
-   - Keep labels textual and GNOME-review friendly.
-   - Avoid icons or trademarks unless redistribution rights are clear.
-
-7. **Add IndyCar schedule only with authoritative timestamps**
+5. **Add IndyCar schedule only with authoritative timestamps**
    - Parse explicit UTC timestamps.
-   - Handle time-zone conversion using the same principles as F1.
+   - Convert to system-local and venue-local time only from authoritative data.
    - If only event dates are available, label the UI accordingly; do not imply session-level precision.
 
-8. **Rename user-facing metadata and documentation**
-   - Update `metadata.json`, README, package commands, descriptions, credits, security discussion, and screenshots if any.
-   - Preserve UUID unless the separate-extension decision is made.
+6. **Finish documentation and attribution**
+   - Document providers, refresh behavior, privacy/security boundaries, local installation, packaging, and known limitations.
 
-9. **Test and package**
-   - Verify enable/disable cycles, cancellation of requests, cache behavior, offline behavior, malformed payloads, 404/429 handling, and year rollover.
+7. **Test and package**
+   - Verify enable/disable cycles, cancellation, cache behavior, offline behavior, malformed payloads, 404/429 handling, year rollover, and coexistence with OpenF1 Dashboard.
 
 ## Security and review constraints
 
-Continue the current project’s defensive approach:
+Continue the imported project’s defensive approach:
 
 - HTTPS-only fixed hosts
 - Exact endpoint/path allowlisting
 - No user-controlled arbitrary URLs
-- No API secrets embedded in the extension
+- No API secrets embedded in distributed JavaScript
 - Response and cache size limits
 - Payload-shape and type validation
 - Request cancellation on disable
@@ -254,26 +230,17 @@ Continue the current project’s defensive approach:
 - Conservative refresh intervals and last-known-good cache
 - Provider attribution and license/terms review
 
-If a provider requires a secret API key, do not commit it or place it in distributed extension JavaScript. That would require a proxy service or a different provider.
+If a provider requires a secret API key, do not commit it or place it in the extension. That would require a proxy service or a different provider.
 
 ## Linux pickup instructions
-
-On the Linux machine, from an existing clone:
-
-```bash
-cd /path/to/openf1-gnome-extension
-git status
-git fetch origin
-git switch feature/open-wheel-indycar
-git pull --ff-only origin feature/open-wheel-indycar
-```
 
 For a new clone:
 
 ```bash
-git clone git@github.com:afsilva/openf1-gnome-extension.git
-cd openf1-gnome-extension
-git switch --track origin/feature/open-wheel-indycar
+git clone git@github.com:afsilva/openindy-gnome-extension.git
+cd openindy-gnome-extension
+git switch main
+git pull --ff-only origin main
 ```
 
 Read this file before coding:
@@ -282,28 +249,21 @@ Read this file before coding:
 less DEVELOPMENT_HANDOFF.md
 ```
 
-Confirm the branch and clean working tree:
+Confirm a clean worktree:
 
 ```bash
-git branch --show-current
 git status --short --branch
 ```
 
-Expected branch:
-
-```text
-feature/open-wheel-indycar
-```
-
-### Baseline install/test
+During development, replace `UUID` below with the finalized standalone OpenIndy UUID:
 
 ```bash
-UUID="openf1dashboard@ansilva"
-mkdir -p ~/.local/share/gnome-shell/extensions
-rm -rf ~/.local/share/gnome-shell/extensions/$UUID
-cp -r "$UUID" ~/.local/share/gnome-shell/extensions/
-gnome-extensions enable "$UUID"
+UUID="openindydashboard@ansilva"
+gnome-extensions pack --force --extra-source=LICENSE "$UUID"
+gnome-extensions install --force "$UUID.shell-extension.zip"
 ```
+
+On Wayland, log out and back in when changed metadata is not reloaded by an enable/disable cycle.
 
 Inspect state and errors:
 
@@ -315,46 +275,32 @@ gdbus call --session \
   --method org.gnome.Shell.Extensions.GetExtensionErrors \
   "$UUID"
 journalctl --user --since "10 min ago" | grep -Ei \
-  "gnome-shell|openf1dashboard|openwheel"
+  "gnome-shell|openindy"
 ```
 
-Wayland-safe reload during development:
+## First development checklist
 
-```bash
-gnome-extensions disable "$UUID"
-gnome-extensions enable "$UUID"
-```
-
-Package after implementation:
-
-```bash
-gnome-extensions pack --force --extra-source=LICENSE "$UUID"
-```
-
-## First Linux development checklist
-
-Before writing feature code, answer and record these decisions in this file or a follow-up design document:
-
-- [ ] Confirm visible name: `OpenWheel Dashboard` or alternative
-- [ ] Preserve existing UUID or publish as a separate extension
-- [ ] Series selector or simultaneous sections
-- [ ] Confirm source of authoritative IndyCar UTC schedule timestamps
-- [ ] Driver-only IndyCar standings for v1, or additional standings
+- [x] Use a standalone repository instead of merging IndyCar into OpenF1 Dashboard
+- [ ] Confirm visible name (`OpenIndy Dashboard` or alternative)
+- [ ] Confirm final standalone UUID and directory
+- [ ] Confirm GNOME Shell target versions
+- [ ] Confirm whether standings-only is acceptable for v1
+- [ ] Confirm authoritative IndyCar UTC schedule source
+- [ ] Confirm standings fields and depth
 - [ ] Confirm provider attribution text and links
-- [ ] Confirm current RaceHooks usage terms and rate limits
-- [ ] Confirm GNOME Shell target version on the Linux test machine
+- [ ] Reconfirm current RaceHooks terms and rate limits
+- [ ] Verify coexistence with `openf1dashboard@ansilva`
 
 ## Branch discipline
 
-Keep this feature isolated on `feature/open-wheel-indycar`. Make small commits such as:
+Use short feature branches from `main` and focused commits such as:
 
 ```text
-refactor: normalize series schedule data
+chore: establish standalone OpenIndy identity
+refactor: isolate provider data normalization
 feat: add IndyCar driver standings provider
-feat: add series selector
 feat: add IndyCar schedule
-chore: rename extension to OpenWheel Dashboard
- docs: document providers and migration
+ docs: document providers and release process
 ```
 
-Do not merge into `main` until the existing F1 functionality remains stable, provider terms have been reviewed, schedule timestamps are authoritative, and the extension passes runtime validation on Linux.
+Do not publish the extension until all F1 identity and provider code has been removed, provider terms have been reviewed, schedule timestamps are authoritative for any schedule UI, and runtime validation passes on supported GNOME Shell versions.

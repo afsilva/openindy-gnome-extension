@@ -1,216 +1,53 @@
-# OpenF1 Dashboard (GNOME 50 Extension)
+# OpenIndy GNOME Extension
 
-A GNOME Shell extension that displays:
+A standalone IndyCar-focused GNOME Shell extension project.
 
-1. **Calendar**
-   - Upcoming **non-canceled** race weekend
-   - During an active race weekend, the **next upcoming session/event**
-   - Time shown in:
-     - race local time
-     - UTC
-     - your system local time
-   - Uses text status labels such as `F1 | FP1`, `F1 | LIVE R`, `NEXT`, and `DONE` instead of emoji in the GNOME-review-ready `main` branch
+> **Development status:** planning/scaffolding. No IndyCar runtime functionality
+> has been implemented yet. The currently imported OpenF1 Dashboard code is a
+> temporary GNOME Shell baseline and must not be packaged or published as
+> OpenIndy.
 
-2. **Championship points**
-   - Drivers standings (Top 10, full names)
-   - Constructors standings (Top 10 teams)
+This repository was split from the former `feature/open-wheel-indycar` branch of
+[`afsilva/openf1-gnome-extension`](https://github.com/afsilva/openf1-gnome-extension).
+OpenF1 Dashboard and OpenIndy are intentionally separate so users can install
+only the racing series they follow—or install both without either extension
+controlling the other.
 
-Data sources:
+## Planned scope
 
-- Calendar/session schedule: [OpenF1 API](https://api.openf1.org) ([GitHub](https://github.com/br-g/openf1))
-- Championship standings: [Jolpica Ergast-compatible API](https://api.jolpi.ca/ergast/f1) ([GitHub](https://github.com/jolpica/jolpica-f1))
+- IndyCar driver standings
+- Upcoming IndyCar event/session information when authoritative UTC timestamps
+  are available
+- Cache-first behavior and useful offline/last-known-good state
+- Fixed HTTPS providers, strict response validation, bounded cache/response
+  sizes, and request cancellation
+- Independent UUID, cache, metadata, UI, and provider attribution
+- Coexistence with `openf1dashboard@ansilva`
 
-The popup includes a compact `Data: OpenF1 / Jolpica` credit row. Each API name is clickable and opens the corresponding project repository via the system browser.
+## Before development
 
-The previous emoji/flag-based UI is preserved in the [`emoji-ui-preserved`](https://github.com/afsilva/openf1-gnome-extension/tree/emoji-ui-preserved) branch.
+Read [`DEVELOPMENT_HANDOFF.md`](./DEVELOPMENT_HANDOFF.md). It records the API
+research, unresolved schedule-data issue, security requirements, proposed
+standalone identity, and implementation sequence.
 
----
+Important: do not release the current imported package. It still has the OpenF1
+UUID, directory, providers, labels, and cache identity. The first implementation
+step is to establish a distinct OpenIndy identity, proposed as:
 
-## Compatibility
+```text
+Visible name: OpenIndy Dashboard
+UUID/directory: openindydashboard@ansilva
+```
 
-- GNOME Shell **50**
+The final UUID must be decided before publication and remain stable afterward.
 
----
+## Repository relationship
+
+This repository preserves the history of the original planning branch for
+traceability. Future OpenIndy work belongs here. Formula 1 development remains
+in [`openf1-gnome-extension`](https://github.com/afsilva/openf1-gnome-extension).
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
-
-- Full license text: [`LICENSE`](./LICENSE)
-- The extension upload bundle also includes [`openf1dashboard@ansilva/LICENSE`](./openf1dashboard%40ansilva/LICENSE)
-- SPDX identifier: `GPL-3.0-or-later`
-
----
-
-## Development transparency
-
-This project used AI-assisted development tooling during implementation and documentation work. The project author directed the requirements, reviewed the code, performed GNOME Shell runtime validation, and remains responsible for the submitted extension.
-
-Validation included GNOME Shell runtime checks with `gnome-extensions`, `gdbus`, and `journalctl`, plus iterative fixes based on observed behavior.
-
----
-
-## Install (local dev)
-
-Clone (or download) this repository anywhere, then run:
-
-```bash
-cd /path/to/openf1-gnome-extension
-UUID="openf1dashboard@ansilva"
-mkdir -p ~/.local/share/gnome-shell/extensions
-cp -r "$UUID" ~/.local/share/gnome-shell/extensions/
-```
-
-Enable:
-
-```bash
-gnome-extensions enable "$UUID"
-```
-
-Disable:
-
-```bash
-gnome-extensions disable "$UUID"
-```
-
-Reload quickly (Wayland-safe method):
-
-```bash
-gnome-extensions disable "$UUID"
-gnome-extensions enable "$UUID"
-```
-
----
-
-## Package for extensions.gnome.org
-
-The `main` branch is the GNOME-review-ready version. It avoids emoji UI elements, aborts pending HTTP requests on disable, uses asynchronous cache reads in the GNOME Shell process, and fetches championship standings from two fixed Jolpica endpoints.
-
-Create the upload bundle from the repository root:
-
-```bash
-gnome-extensions pack --force --extra-source=LICENSE openf1dashboard@ansilva
-```
-
-This creates:
-
-```text
-openf1dashboard@ansilva.shell-extension.zip
-```
-
-The generated archive should contain only the files needed at runtime:
-
-```text
-metadata.json
-extension.js
-stylesheet.css
-LICENSE
-```
-
-The generated `.shell-extension.zip` file is intentionally ignored by git.
-
----
-
-## Notes on standings
-
-OpenF1 does not provide a single direct championship standings endpoint. To avoid reconstructing season totals from many per-session result calls, this extension reads current driver and constructor standings from the Jolpica Ergast-compatible API.
-
-Only two fixed Jolpica standings endpoints are used and cached:
-
-```text
-current/driverStandings.json
-current/constructorStandings.json
-```
-
-This keeps the displayed standings aligned with current published championship totals while reducing API pressure.
-
----
-
-## Security review (OWASP Top 10 aligned)
-
-This extension is a local GNOME UI client with outbound HTTPS requests to OpenF1 for schedule data and Jolpica for championship standings. It does not process credentials, auth tokens, payments, or user-provided arbitrary input. Still, the code applies OWASP-aligned controls:
-
-### A01 Broken Access Control
-- No privileged backend actions or user role model in scope.
-- Extension only reads public API data and writes a local cache file in user cache dir.
-
-### A02 Cryptographic Failures
-- Uses HTTPS API endpoints only (`https://api.openf1.org/v1` and `https://api.jolpi.ca/ergast/f1`).
-- No secrets stored in code or cache.
-
-### A03 Injection
-- OpenF1 path/query is allowlisted (`meetings`, `sessions`) and query strings are validated against URL-safe characters.
-- Jolpica standings paths are fixed and allowlisted (`current/driverStandings.json`, `current/constructorStandings.json`).
-- API credit links use fixed repository URLs and launch only after explicit user clicks.
-- UI output is sanitized to strip control characters and normalize whitespace.
-
-### A04 Insecure Design
-- Cache-first design reduces API pressure and failure exposure.
-- Standings use two current championship endpoints instead of many historical race/sprint result calls.
-- Explicit refresh policy (daily off-weekend, hourly race weekend).
-- Defensive handling for API 404/429 and canceled sessions.
-- Pending HTTP requests are aborted when the extension is disabled/destroyed.
-
-### A05 Security Misconfiguration
-- HTTP session has timeout configured.
-- Cache file reads use asynchronous Gio APIs to avoid blocking the GNOME Shell process.
-- Error messages shown in UI are generic (no raw payload dump).
-
-### A06 Vulnerable/Outdated Components
-- Keep GNOME Shell/GJS/Soup runtime updated via distro updates.
-- No bundled third-party JS packages.
-
-### A07 Identification and Authentication Failures
-- Not applicable (no auth workflow).
-
-### A08 Software and Data Integrity Failures
-- Parsed API payload shape is validated (OpenF1 arrays and Jolpica standings objects).
-- Large responses are bounded to prevent memory abuse.
-
-### A09 Security Logging and Monitoring Failures
-- GNOME Shell logs capture extension errors (`journalctl --user`, DBus extension error API).
-- Runtime UI avoids leaking full backend payloads while still signaling error state.
-
-### A10 Server-Side Request Forgery (SSRF)
-- Endpoint hosts are fixed constants (`api.openf1.org`, `api.jolpi.ca`).
-- OpenF1 dynamic path/query is validated and endpoint-allowlisted.
-- Jolpica paths are fixed and allowlisted.
-
-## Additional hardening implemented
-- Response size cap (1MB)
-- On-disk cache size cap (2MB)
-- Endpoint cache entry cap
-- Fixed/allowlisted standings endpoints
-- Fixed API credit repository links opened only by user action
-- Asynchronous cache reads in the GNOME Shell process
-- HTTP request abort on extension disable/destroy
-- Sanitized UI text rendering
-- Text-based status labels for the GNOME-review-ready branch
-- Genericized error surface in UI
-
----
-
-## AI-assisted development note
-
-This repository previously included a prompt-history section for educational transparency. For the GNOME-review-ready `main` branch, the documentation focuses on maintainership, runtime behavior, validation, and packaging. The author remains responsible for understanding and maintaining the submitted code.
-
----
-
-## Validation commands
-
-Check extension state:
-
-```bash
-UUID="openf1dashboard@ansilva"
-gnome-extensions info "$UUID"
-gdbus call --session --dest org.gnome.Shell.Extensions \
-  --object-path /org/gnome/Shell/Extensions \
-  --method org.gnome.Shell.Extensions.GetExtensionErrors \
-  "$UUID"
-```
-
-Inspect logs:
-
-```bash
-journalctl --user --since "10 min ago" | grep -Ei "gnome-shell|openf1dashboard|extension"
-```
+This project is licensed under the GNU General Public License v3.0 or later.
+See [`LICENSE`](./LICENSE).
