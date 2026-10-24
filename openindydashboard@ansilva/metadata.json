@@ -1,0 +1,7 @@
+{
+  "uuid": "openindydashboard@ansilva",
+  "name": "OpenIndy Dashboard",
+  "description": "GNOME Shell extension showing the next IndyCar race and championship points.",
+  "shell-version": ["50", "51"],
+  "url": "https://github.com/afsilva/openindy-gnome-extension"
+}

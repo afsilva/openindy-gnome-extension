@@ -1,0 +1,36 @@
+.openindy-menu-box {
+  max-height: 760px;
+  width: 500px;
+}
+
+.openindy-row-compact {
+  padding-top: 0;
+  padding-bottom: 0;
+  min-height: 0;
+}
+
+.openindy-row-compact .popup-menu-item-label {
+  font-size: 8.7pt;
+  line-height: 1.10;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: normal;
+}
+
+.openindy-link-button {
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 8.7pt;
+  text-decoration: underline;
+}
+
+.openindy-link-button:hover,
+.openindy-link-button:focus {
+  color: rgba(255, 255, 255, 1);
+}
+
+.openindy-row-dim .popup-menu-item-label {
+  opacity: 0.82;
+}
